@@ -1,0 +1,31 @@
+name: Professional 24-7 Live Stream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+          sudo chmod a+rx /usr/local/bin/yt-dlp
+
+      - name: Start Live
+        run: |
+          VIDEO_URL="https://youtu.be/-8Nxf5Ng7p4"
+          DIRECT=$(yt-dlp -f "best" -g "$VIDEO_URL")
+          TARGET="rtmp://a.rtmp.youtube.com/live2/${{ secrets.YOUTUBE_STREAM_KEY }}"
+
+          ffmpeg -re -stream_loop -1 -i "$DIRECT" \
+          -filter_complex \
+          "[0:v]scale=1280:720,hue=s=1.2:b=0.1,vignette=PI/4, \
+           drawtext=text='LIKE & SUBSCRIBE':x=w-tw-50:y=h-th-50:fontsize=40:fontcolor=white:box=1:boxcolor=red@0.8, \
+           drawtext=text='WELCOME TO CANADA':x=50:y=50:fontsize=45:fontcolor=white:borderw=2:bordercolor=red, \
+           drawtext=text='BEAUTIFUL MEMORIES':x=(w-tw)/2:y=h-th-100:fontsize=45:fontcolor=cyan:borderw=2:bordercolor=black[v]" \
+          -map "[v]" -map 0:a -c:v libx264 -preset veryfast -b:v 3000k -f flv "$TARGET"
